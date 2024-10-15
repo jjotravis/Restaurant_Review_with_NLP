@@ -112,49 +112,43 @@ async def update_review(review_id: int, review: ReviewUpdate, service: ReviewSer
 
 @app.get("/api/user", response_model=list[UserResponse])
 async def read_all_users(service: Session = Depends(get_user_service)):
-    # service = UserService.get_all_users()
     return service.get_all_users()
 
 @app.get("/api/user/id/{user_id}", response_model=UserResponse)
-async def read_user_by_id(user_id: int, db: Session = Depends(get_user_service)):
-    service = UserService(db)
+async def read_user_by_id(user_id: int, service: Session = Depends(get_user_service)):
     user = service.get_user_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @app.get("/api/user/username/{username}", response_model=UserResponse)
-async def read_user_by_username(username: str, db: Session = Depends(get_user_service)):
-    service = UserService(db)
+async def read_user_by_username(username: str, service: Session = Depends(get_user_service)):
     user = service.get_user_by_username(username)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @app.post("/api/user/add", response_model=UserResponse)
-async def create_new_user(user: UserCreate, db: Session = Depends(get_user_service)):
-    service = UserService(db)
+async def create_new_user(user: UserCreate, service: Session = Depends(get_user_service)):
     db_user = service.create_user(user)
     return db_user
 
 @app.put("/api/user/update", response_model=UserResponse)
-async def update_existing_user(user: UserUpdate, db: Session = Depends(get_user_service)):
-    service = UserService(db)
+async def update_existing_user(user: UserUpdate, service: Session = Depends(get_user_service)):
     db_user = service.update_user(user)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @app.delete("/api/user/delete/{user_id}")
-async def delete_existing_user(user_id: int, db: Session = Depends(get_user_service)):
-    service = UserService(db)
+async def delete_existing_user(user_id: int, service: Session = Depends(get_user_service)):
     if not service.delete_user(user_id):
         raise HTTPException(status_code=404, detail="User not found")
     return {"detail": "User deleted successfully"}
 
 @app.post("/token")
-async def login(user: UserBase, db: Session = Depends(get_auth_service)):
-    db_user = UserService(db).get_user_by_username(user.username)
+async def login(user: UserBase, service: Session = Depends(get_auth_service)):
+    db_user = service.get_user_by_username(user.username)
     if db_user and Auth.verify_password(user.password, db_user.password):
         access_token = Auth.create_access_token(data={"sub": user.username})
         return {"access_token": access_token, "token_type": "bearer"}
@@ -162,13 +156,11 @@ async def login(user: UserBase, db: Session = Depends(get_auth_service)):
 
 # Protected routes
 @app.get("/api/user", response_model=UserResponse)
-async def read_all_users(current_user: UserBase = Depends(get_current_active_user), db: Session = Depends(get_auth_service)):
-    service = UserService(db)
+async def read_all_users(current_user: UserBase = Depends(get_current_active_user), service: Session = Depends(get_auth_service)):
     return service.get_all_users()
 
 @app.get("/api/user/id/{user_id}", response_model=UserResponse)
-async def read_user_by_id(user_id: int, current_user: UserBase = Depends(get_current_active_user), db: Session = Depends(get_auth_service)):
-    service = UserService(db)
+async def read_user_by_id(user_id: int, current_user: UserBase = Depends(get_current_active_user), service: Session = Depends(get_auth_service)):
     user = service.get_user_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -181,16 +173,14 @@ async def read_user_by_id(user_id: int, current_user: UserBase = Depends(get_cur
 #     return db_user
 
 @app.put("/api/user/update", response_model=UserResponse)
-async def update_existing_user(user: UserUpdate, current_user: UserBase = Depends(get_current_user), db: Session = Depends(get_auth_service)):
-    service = UserService(db)
+async def update_existing_user(user: UserUpdate, current_user: UserBase = Depends(get_current_user), service: Session = Depends(get_auth_service)):
     db_user = service.update_user(user)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @app.delete("/api/user/delete/{user_id}")
-async def delete_existing_user(user_id: int, current_user: UserBase = Depends(get_current_admin_user), db: Session = Depends(get_auth_service)):
-    service = UserService(db)
+async def delete_existing_user(user_id: int, current_user: UserBase = Depends(get_current_admin_user), service: Session = Depends(get_auth_service)):
     if not service.delete_user(user_id):
         raise HTTPException(status_code=404, detail="User not found")
     return {"detail": "User deleted successfully"}
