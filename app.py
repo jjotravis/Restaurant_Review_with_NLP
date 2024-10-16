@@ -1,6 +1,8 @@
 # main.py or your FastAPI app file
 
 from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
+from datetime import timedelta
 from sqlalchemy.orm import Session
 from typing import List
 from Pydantic_Models.AdminModel import AdminCreate, AdminUpdate, AdminResponse
@@ -17,12 +19,31 @@ from Security import get_current_user, get_current_active_user, get_current_admi
 
 app = FastAPI()
 
+@app.post("/token", response_model=dict)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), service: Session = Depends(get_auth_service)):
+    user = service.get_user_by_username(form_data.username)
+    if not user or not Auth.verify_password(form_data.password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=20)
+    access_token = Auth.create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @app.get("/admin", response_model=List[AdminResponse], status_code=status.HTTP_200_OK)
-def  get_all_admins(service: AdminService = Depends(get_admin_service)):
+def get_all_admins(
+    current_user: UserBase = Depends(get_current_admin_user),  # Ensure only admins access this
+    service: AdminService = Depends(get_admin_service)
+):
     try:
         return service.get_all_admins()
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @app.get("/admin/{admin_id}", response_model=AdminResponse)
 async def get_admin_by_id(admin_id: int, service: AdminService = Depends(get_admin_service)):
@@ -99,7 +120,7 @@ async def get_reviews_by_user(user_id: int, service: ReviewService = Depends(get
 async def get_reviews_by_restaurant(restaurant_id: int, service: ReviewService = Depends(get_review_service)):
     return service.get_reviews_by_restaurant_id(restaurant_id)
 
-@app.post("/reviews/", response_model=ReviewResponse)
+@app.post("/reviews/", response_model=ReviewResponse, )
 async def create_review(review: ReviewCreate, service: ReviewService = Depends(get_review_service)):
     return service.create_review(review)
 

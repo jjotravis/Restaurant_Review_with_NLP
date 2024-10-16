@@ -7,10 +7,11 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from Utilities.Db import get_db
+import secrets
 
 class Auth:
-    def __init__(self):
-        self.SECRET_KEY = os.getenv("SECRET_KEY")
+    def __init__(self, db: Session):
+        self.SECRET_KEY = secrets.token_hex(32)
         self.ALGORITHM = "HS256"
         self.ACCESS_TOKEN_EXPIRE_MINUTES = 30
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

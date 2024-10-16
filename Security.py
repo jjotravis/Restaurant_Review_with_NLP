@@ -1,19 +1,19 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from AuthController import  Auth #verify_password, verify_token
+from AuthController import  Auth, get_auth_service #verify_password, verify_token
 from Pydantic_Models.UserModel import UserBase
-from Controllers.UserController import UserService
+from Controllers.UserController import UserService, get_user_service
 from Utilities.Db import SessionLocal
 from sqlalchemy.orm import Session
 from Utilities.Db import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), service: UserService = Depends(get_user_service)):
     payload = Auth.verify_token(token)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = UserService(db).get_user_by_username(payload.get("sub"))
+    user = service.get_user_by_username(payload.get("sub"))
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
