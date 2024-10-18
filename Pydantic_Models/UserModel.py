@@ -22,5 +22,10 @@ class UserResponse(BaseModel):
     review_count: int
     role: str
 
+class UserResponseLogin(BaseModel):
+    username: str
+    password: str
+    role: str
+
     class Config:
         from_attributes = True

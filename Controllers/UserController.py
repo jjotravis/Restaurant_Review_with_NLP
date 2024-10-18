@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from Utilities.Db import get_db
@@ -22,9 +23,10 @@ class UserService:
         return self.db.query(User).filter(User.username == username).first()
 
     def create_user(self, user: UserCreate):
+        if not user.username or not user.password:
+            raise ValueError("Username and password are required for user creation.")
         hashed_password = pwd_context.hash(user.password)
         user.password = hashed_password
-        # db_user = User(username=user.username, password=hashed_password, review_count=user.review_count, role=user.role)
         db_user = User(**user.dict())
         self.db.add(db_user)
         self.db.commit()

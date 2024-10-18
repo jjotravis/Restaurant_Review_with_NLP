@@ -13,8 +13,10 @@ class AdminCreate(AdminBase):
 class AdminUpdate(AdminBase):
     admin_id: int
 
-class AdminResponse(AdminBase):
+class AdminResponse(BaseModel):
     admin_id: int
+    name: str
+    role: str
 
     class Config:
         from_attributes = True

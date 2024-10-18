@@ -1,42 +1,60 @@
 # main.py or your FastAPI app file
 
 from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import timedelta
 from sqlalchemy.orm import Session
 from typing import List
 from Pydantic_Models.AdminModel import AdminCreate, AdminUpdate, AdminResponse
 from Pydantic_Models.RestaurantModel import RestaurantCreate, RestaurantUpdate, RestaurantInDB
 from Pydantic_Models.ReviewModel import ReviewCreate, ReviewResponse, ReviewUpdate
-from Pydantic_Models.UserModel import UserCreate, UserResponse, UserUpdate, UserBase
+from Pydantic_Models.UserModel import UserCreate, UserResponse, UserUpdate, UserBase, UserResponseLogin
+from Pydantic_Models.TokenModel import TokenCreate
 from Controllers.AdminController import AdminService, get_admin_service
 from Controllers.RestaurantController import RestaurantService, get_restaurant_service
 from Controllers.ReviewController import ReviewService, get_review_service
 from Controllers.UserController import UserService, get_user_service
 from AuthController import Auth, get_auth_service
-from Security import get_current_user, get_current_active_user, get_current_admin_user
+# from Security import get_current_user, get_current_active_user, get_current_admin_user
 
 
 app = FastAPI()
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def get_current_user(token: str = Depends(oauth2_scheme), auth_service: Auth = Depends(get_auth_service)):
+    return auth_service.get_current_user(token)
+
+# Function to get the current active user
+def get_current_active_user(current_user: UserBase = Depends(get_current_user), auth_service: Auth = Depends(get_auth_service)):
+    return auth_service.get_current_active_user(current_user)
+
+# Function to get the current admin user
+def get_current_admin_user(current_user: UserBase = Depends(get_current_user), auth_service: Auth = Depends(get_auth_service)):
+    return auth_service.get_current_admin_user(current_user)
+
 @app.post("/token", response_model=dict)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), service: Session = Depends(get_auth_service)):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), service: Session = Depends(get_user_service), Autho: Session = Depends(get_auth_service)):
     user = service.get_user_by_username(form_data.username)
-    if not user or not Auth.verify_password(form_data.password, user.password):
+    
+    if not user or not Autho.verify_password(form_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
     access_token_expires = timedelta(minutes=20)
-    access_token = Auth.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+    
+    access_token = Autho.create_access_token(
+        data={"sub": user.username, "user_id": user.user_id}, expires_delta=access_token_expires
     )
+    
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/admin", response_model=List[AdminResponse], status_code=status.HTTP_200_OK)
 def get_all_admins(
-    current_user: UserBase = Depends(get_current_admin_user),  # Ensure only admins access this
+    current_user: UserBase = Depends(get_auth_service),  # Ensure only admins access this
     service: AdminService = Depends(get_admin_service)
 ):
     try:
@@ -142,12 +160,14 @@ async def read_user_by_id(user_id: int, service: Session = Depends(get_user_serv
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@app.get("/api/user/username/{username}", response_model=UserResponse)
+@app.get("/api/user/username/{username}", response_model=UserResponseLogin)
 async def read_user_by_username(username: str, service: Session = Depends(get_user_service)):
     user = service.get_user_by_username(username)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
 
 @app.post("/api/user/add", response_model=UserResponse)
 async def create_new_user(user: UserCreate, service: Session = Depends(get_user_service)):
@@ -167,13 +187,13 @@ async def delete_existing_user(user_id: int, service: Session = Depends(get_user
         raise HTTPException(status_code=404, detail="User not found")
     return {"detail": "User deleted successfully"}
 
-@app.post("/token")
-async def login(user: UserBase, service: Session = Depends(get_auth_service)):
-    db_user = service.get_user_by_username(user.username)
-    if db_user and Auth.verify_password(user.password, db_user.password):
-        access_token = Auth.create_access_token(data={"sub": user.username})
-        return {"access_token": access_token, "token_type": "bearer"}
-    raise HTTPException(status_code=401, detail="Invalid credentials")
+# @app.post("/token")
+# async def login(user: UserBase, service: Session = Depends(get_auth_service)):
+#     db_user = service.get_user_by_username(user.username)
+#     if db_user and Auth.verify_password(user.password, db_user.password):
+#         access_token = Auth.create_access_token(data={"sub": user.username})
+#         return {"access_token": access_token, "token_type": "bearer"}
+#     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 # Protected routes
 @app.get("/api/user", response_model=UserResponse)
