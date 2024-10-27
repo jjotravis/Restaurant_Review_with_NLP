@@ -1,13 +1,14 @@
-from fastapi import FastAPI, HTTPException, Depends
-from typing import List, Optional
-from Pydantic_Models.RestaurantModel import  RestaurantCreate,RestaurantUpdate
+from fastapi import Depends
+from Pydantic_Models.RestaurantModel import RestaurantCreate, RestaurantUpdate
+from sqlalchemy.orm import Session
 from Models.Restaurant import Restaurant
 from Utilities.Db import get_db
-from sqlalchemy.orm import Session
+from Utilities.redis import RedisClient, get_redis
 
 class RestaurantService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session = Depends(get_db), redis_client: RedisClient = Depends(get_redis)):
         self.db = db
+        self.redis_client = redis_client
 
     def get_restaurants(self, skip: int = 0, limit: int = 10):
         return self.db.query(Restaurant).offset(skip).limit(limit).all()
@@ -37,8 +38,14 @@ class RestaurantService:
         if db_restaurant:
             self.db.delete(db_restaurant)
             self.db.commit()
+            self.redis_client.remove_restaurant(str(db_restaurant.restaurant_id))  # Remove from leaderboard
             return True
         return False
-    
-def get_restaurant_service(db: Session = Depends(get_db)) -> RestaurantService:
-    return RestaurantService(db)
+
+    def get_leaderboard(self, top_n: int = 10):
+        leaderboard = self.redis_client.get_top_restaurants(top_n)
+        return leaderboard
+
+# Dependency for API
+def get_restaurant_service(db: Session = Depends(get_db), redis_client: RedisClient = Depends(get_redis)) -> RestaurantService:
+    return RestaurantService(db, redis_client)

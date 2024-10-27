@@ -1,5 +1,3 @@
-# admin_service.py
-
 from typing import List
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
@@ -58,6 +56,7 @@ class AdminService:
         self.db.delete(admin)
         self.db.commit()
         return "Admin deleted successfully"
+    
 # Dependency to provide an AdminService instance
 def get_admin_service(db: Session = Depends(get_db)) -> AdminService:
     return AdminService(db)
