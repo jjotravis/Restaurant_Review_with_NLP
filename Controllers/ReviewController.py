@@ -5,8 +5,8 @@ from sqlalchemy import func
 from typing import List, Optional
 from textblob import TextBlob
 from Models.Review import Review
+from Models.User import User
 from Controllers.RestaurantController import RestaurantService, get_restaurant_service
-# from Controllers.AuthController import AdminService
 from Utilities.Db import get_db
 from Utilities.redis import RedisClient, get_redis
 from fastapi import Depends
@@ -60,11 +60,17 @@ class ReviewService:
         self.db.commit()
         self.db.refresh(db_review)
 
+        user = self.db.query(User).filter(User.user_id == current_user).first()
+        if user:
+            user.review_count += 1
+            self.db.commit()
+
 
         restaurant = self.restaurant_service.get_restaurant(db_review.restaurant_id)
         if restaurant:
             score = 1 if sentiment == "positive" else -1 if sentiment == "negative" else 0
             self.redis_client.add_or_update_restaurant_score(str(db_review.restaurant_id), restaurant.name,score)
+            self.redis_client.add_or_update_restaurant(str(db_review.restaurant_id), restaurant.name,score)
 
         self.update_restaurant_average_rating(review.restaurant_id)    
 
