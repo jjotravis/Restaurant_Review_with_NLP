@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Sequence
+from sqlalchemy import Column, Integer, String, Sequence, Float
 from Utilities.Db import Base
 
 class Restaurant(Base):
@@ -8,4 +8,4 @@ class Restaurant(Base):
     name = Column(String, unique=True, nullable=False)
     address = Column(String, unique=True, nullable=False)
     cuisine = Column(String, nullable=False)
-    average_rating = Column(Integer, default=0)
+    average_rating = Column(Float, default=0)
