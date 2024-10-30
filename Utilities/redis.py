@@ -5,7 +5,7 @@ class RedisClient:
     def __init__(self, host='localhost', port=6379, db=0):
         self.client = redis.StrictRedis(host=host, port=port, db=db, decode_responses=True)
 
-    def add_or_update_restaurant_score(self, restaurant_id: str,restaurant_name: str, score: float):
+    def add_or_update_restaurant(self, restaurant_id: str,restaurant_name: str, score: float):
         """
         Add or update a restaurant's score. Use a sorted set where:
         - `restaurant_leaderboard` is the key

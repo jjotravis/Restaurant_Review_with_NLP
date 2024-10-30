@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from AuthController import  Auth, get_auth_service #verify_password, verify_token
+from Controllers.AuthController import  Auth, get_auth_service #verify_password, verify_token
 from Pydantic_Models.UserModel import UserBase
 from Controllers.UserController import UserService, get_user_service
 from Utilities.Db import SessionLocal
@@ -19,14 +19,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         return user
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-# def get_current_user(token: str = Depends(oauth2_scheme), service: UserService = Depends(get_user_service), Autho : Session = Depends(get_auth_service)):
-#     payload = Autho.verify_token(token)
-#     if not payload:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-#     user = service.get_user_by_username(payload.get("sub"))
-#     if not user:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-#     return user
 
 def get_current_active_user(current_user: UserBase = Depends(get_current_user)):
     if current_user.role not in ["USER", "ADMIN"]:

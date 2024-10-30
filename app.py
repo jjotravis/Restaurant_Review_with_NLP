@@ -74,25 +74,25 @@ def get_all_admins(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@app.get("/restaurant_review/admin/{admin_id}", response_model=AdminResponse)
-async def get_admin_by_id(admin_id: int, service: AdminService = Depends(get_admin_service)):
-    return service.get_admin_by_id(admin_id)
+# @app.get("/restaurant_review/admin/{admin_id}", response_model=AdminResponse)
+# async def get_admin_by_id(admin_id: int, service: AdminService = Depends(get_admin_service)):
+#     return service.get_admin_by_id(admin_id)
 
-@app.get("/restaurant_review/admin/username/{username}", response_model=AdminResponse)
-async def get_admin_by_username(username: str, service: AdminService = Depends(get_admin_service)):
-    return service.get_admin_by_username(username)
+# @app.get("/restaurant_review/admin/username/{username}", response_model=AdminResponse)
+# async def get_admin_by_username(username: str, service: AdminService = Depends(get_admin_service)):
+#     return service.get_admin_by_username(username)
 
-@app.post("/restaurant_review/admin/new", response_model=AdminResponse)
-def create_admin(admin: AdminCreate, service: AdminService = Depends(get_admin_service)):
-    return service.create_admin(admin)
+# @app.post("/restaurant_review/admin/new", response_model=AdminResponse)
+# def create_admin(admin: AdminCreate, service: AdminService = Depends(get_admin_service)):
+#     return service.create_admin(admin)
 
-@app.put("/restaurant_review/admin/update", response_model=AdminResponse)
-async def update_admin(admin: AdminUpdate, service: AdminService = Depends(get_admin_service)):
-    return service.update_admin(admin)
+# @app.put("/restaurant_review/admin/update", response_model=AdminResponse)
+# async def update_admin(admin: AdminUpdate, service: AdminService = Depends(get_admin_service)):
+#     return service.update_admin(admin)
 
-@app.delete("/restaurant_review/admin/delete/{admin_id}")
-async def delete_admin(admin_id: int, service: AdminService = Depends(get_admin_service)):
-    return service.delete_admin(admin_id)
+# @app.delete("/restaurant_review/admin/delete/{admin_id}")
+# async def delete_admin(admin_id: int, service: AdminService = Depends(get_admin_service)):
+#     return service.delete_admin(admin_id)
 
 @app.get("/restaurant_review/restaurant", response_model=list[RestaurantInDB])
 def read_restaurants(skip: int = 0, limit: int = 10, service: RestaurantService = Depends(get_restaurant_service)):
@@ -106,18 +106,18 @@ async def read_restaurant(restaurant_id: int, service: RestaurantService = Depen
     return restaurant
 
 @app.post("/restaurant_review/restaurant", response_model=RestaurantInDB, status_code=status.HTTP_201_CREATED)
-async def create_restaurant_endpoint(restaurant: RestaurantCreate, service: RestaurantService = Depends(get_restaurant_service)):
+async def create_restaurant_endpoint(restaurant: RestaurantCreate, current_user: UserResponse = Depends(get_current_admin_user),service: RestaurantService = Depends(get_restaurant_service)):
     return service.create_restaurant(restaurant)
 
 @app.put("/restaurant_review/restaurant/{restaurant_id}", response_model=RestaurantInDB)
-async def update_restaurant_endpoint(restaurant_id: int, restaurant: RestaurantUpdate, service: RestaurantService = Depends(get_restaurant_service)):
+async def update_restaurant_endpoint(restaurant_id: int, restaurant: RestaurantUpdate, current_user: UserResponse = Depends(get_current_admin_user),service: RestaurantService = Depends(get_restaurant_service)):
     updated_restaurant = service.update_restaurant(restaurant_id, restaurant)
     if updated_restaurant is None:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     return updated_restaurant
 
 @app.delete("/restaurant_review/restaurant/{restaurant_id}", response_model=str)
-async def delete_restaurant_endpoint(restaurant_id: int, service: RestaurantService = Depends(get_restaurant_service)):
+async def delete_restaurant_endpoint(restaurant_id: int, current_user: UserResponse = Depends(get_current_admin_user),service: RestaurantService = Depends(get_restaurant_service)):
     success = service.delete_restaurant(restaurant_id)
     if not success:
         raise HTTPException(status_code=404, detail="Restaurant not found")
@@ -157,7 +157,7 @@ async def create_review(review: ReviewCreate, current_user: UserResponse = Depen
     return service.create_review(review, current_user.user_id)
 
 @app.put("/restaurant_review/reviews/{review_id}", response_model=ReviewResponse)
-async def update_review(review_id: int, review: ReviewUpdate, service: ReviewService = Depends(get_review_service)):
+async def update_review(review_id: int, review: ReviewUpdate, current_user: UserResponse = Depends(get_current_user),service: ReviewService = Depends(get_review_service)):
     updated_review = await service.update_review(review_id, review)
     if updated_review is None:
         raise HTTPException(status_code=404, detail="Review not found")
@@ -184,19 +184,19 @@ async def read_user_by_username(username: str, service: Session = Depends(get_us
 
 
 @app.post("/restaurant_review/user/add", response_model=UserResponse)
-async def create_new_user(user: UserCreate, service: Session = Depends(get_user_service)):
+async def create_new_user(user: UserCreate, current_user: UserResponse = Depends(get_current_admin_user),service: Session = Depends(get_user_service)):
     db_user = service.create_user(user)
     return db_user
 
 @app.put("/restaurant_review/user/update", response_model=UserResponse)
-async def update_existing_user(user: UserUpdate, service: Session = Depends(get_user_service)):
+async def update_existing_user(user: UserUpdate, current_user: UserResponse = Depends(get_current_admin_user),service: Session = Depends(get_user_service)):
     db_user = service.update_user(user)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @app.delete("/restaurant_review/user/delete/{user_id}")
-async def delete_existing_user(user_id: int, service: Session = Depends(get_user_service)):
+async def delete_existing_user(user_id: int, current_user: UserResponse = Depends(get_current_admin_user),service: Session = Depends(get_user_service)):
     if not service.delete_user(user_id):
         raise HTTPException(status_code=404, detail="User not found")
     return {"detail": "User deleted successfully"}
